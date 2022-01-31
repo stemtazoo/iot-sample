@@ -7,35 +7,49 @@ import dash_html_components as html
 from dash.dependencies import Input, Output, State
 import plotly.express as px
 import datetime
+import os
 
+#カレントディレクトリの取得
+#current_path = os.getcwd()
+
+#現在時刻を取得
 dt_now = datetime.datetime.now()
 
-df = pd.read_csv('https://git.io/Juf1t')
 i=1
 
 df2 = px.data.iris()  # iris is a pandas DataFrame
 fig = px.scatter(df2, x="sepal_width", y="sepal_length")
 
-us_cities = pd.read_csv("https://raw.githubusercontent.com/plotly/datasets/master/us-cities-top-1k.csv")
-us_cities.head()
-fig_map = px.scatter_mapbox(us_cities, lat="lat", lon="lon", hover_name="City", hover_data=["State", "Population"],
-                        color_discrete_sequence=["fuchsia"], zoom=3, height=300)
-fig_map.update_layout(mapbox_style="open-street-map")
-fig_map.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+#read sensor data
+df_sensor=pd.read_csv('examples\\dash_table_sample_callback\\setting_sensordata.csv')
+
+#map dataをグラフ化
+print(df_sensor)
+fig_map = px.scatter_mapbox(df_sensor, lat="lat", lon="lon", color="level", size="Sensor_value",
+                  color_continuous_scale=px.colors.cyclical.IceFire, size_max=15, zoom=17,hover_name ='Sensor'
+                  ,mapbox_style="carto-positron")
 
 app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
-
+#dashboard layout
 app.layout = dbc.Container([
-    html.H1(children='Hello Dash'),
-    dbc.Label('Click a cell in the table:'),
+    html.H1(children='Sensor Dashboard'),
+    dbc.Label('Sensor data in the table:'),
     dt.DataTable(
-        id='tbl', data=df.to_dict('records'),
-        columns=[{"name": i, "id": i} for i in df.columns],
+        id='tbl', data=df_sensor.to_dict('records'),
+        columns=[{"name": i, "id": i} for i in df_sensor.columns],
         style_data_conditional=[
         {
             'if': {
-                'filter_query': '{Number of Solar Plants} > 100',
-                #'column_id': 'Number of Solar Plants'
+                'filter_query': '{Sensor_value} > 80',
+                #'column_id': 'Value'
+            },
+            'backgroundColor': 'yellow',
+            'color': 'black'
+        },
+        {
+            'if': {
+                'filter_query': '{Sensor_value} > 130',
+                #'column_id': 'Value'
             },
             'backgroundColor': 'tomato',
             'color': 'white'
@@ -43,7 +57,7 @@ app.layout = dbc.Container([
         ],
     ),
     dbc.Alert(id='tbl_out'),
-    dcc.Graph(figure=fig_map),
+    dcc.Graph(figure=fig_map,id='graph_map'),
     dcc.Graph(figure=fig),
     dcc.Interval(
         id='interval-component',
@@ -52,35 +66,40 @@ app.layout = dbc.Container([
     )
 ])
 
-# @callback(Output('tbl_out', 'children'), Input('tbl', 'active_cell'))
-# def update_graphs(active_cell):
-#     #return str(active_cell) if active_cell else "Click the table"
-#     dt_now = datetime.datetime.now()
-#     dtnow_str=dt_now.strftime('%Y年%m月%d日 %H:%M:%S')
-#     return dtnow_str if active_cell else "Click the table"
-
+#update table data
 @callback(Output('tbl_out', 'children')
         , Input('interval-component', 'n_intervals'))
 def update_live(active_cell):
-    #return str(active_cell) if active_cell else "Click the table"
+    #return str(active_cell) "
     dt_now = datetime.datetime.now()
     dtnow_str='Live Update : '+ dt_now.strftime('%Y年%m月%d日 %H:%M:%S')
-    df.iat[0,0]=dtnow_str
+    #df_sensor.iat[0,0]=dtnow_str
     return dtnow_str if active_cell else "Click the table"
-
+#update table data
 @callback(Output('tbl', 'data')
         , Input('interval-component', 'n_intervals'))
 def update_live(data):
     #return str(active_cell) if active_cell else "Click the table"
     dt_now = datetime.datetime.now()
     dtnow_str='Live Update : '+ dt_now.strftime('%Y年%m月%d日 %H:%M:%S')
-    df.iat[0,0]=dtnow_str
-    if df.iat[0,1]>100:
-        df.iat[0,1]=50
+    #df_sensor.iat[0,0]=dtnow_str
+    if df_sensor.iat[0,2]>100:
+        df_sensor.iat[0,1]='OK'
+        df_sensor.iat[0,2]=50
     else:
-        df.iat[0,1]=150
-    data=df.to_dict('records')
+        df_sensor.iat[0,1]='NG'
+        df_sensor.iat[0,2]=150
+    data=df_sensor.to_dict('records')
     return data
+
+#update graph map
+@app.callback(Output('graph_map', 'figure'),
+              Input('interval-component', 'n_intervals'))
+def update_graph_live(n):
+    fig_map = px.scatter_mapbox(df_sensor, lat="lat", lon="lon", color="Sensor_value", size="Sensor_value",
+                  color_continuous_scale=px.colors.cyclical.IceFire, size_max=15, zoom=17,hover_name ='Sensor'
+                  ,mapbox_style="carto-positron")
+    return fig_map
 
 if __name__ == "__main__":
     app.run_server(debug=True)
