@@ -9,6 +9,14 @@ import plotly.express as px
 import datetime
 import os
 
+#マップ作成関数
+def CreateMap():
+    fig_map = px.scatter_mapbox(df_sensor, lat="lat", lon="lon", color="Sensor_value", size="Sensor_value",
+                  color_continuous_scale=px.colors.cyclical.IceFire, size_max=15, zoom=17,hover_name ='Sensor'
+                  ,hover_data=["level"],mapbox_style="carto-positron")
+    return fig_map
+
+
 #カレントディレクトリの取得
 #current_path = os.getcwd()
 
@@ -25,9 +33,10 @@ df_sensor=pd.read_csv('examples\\dash_table_sample_callback\\setting_sensordata.
 
 #map dataをグラフ化
 print(df_sensor)
-fig_map = px.scatter_mapbox(df_sensor, lat="lat", lon="lon", color="level", size="Sensor_value",
-                  color_continuous_scale=px.colors.cyclical.IceFire, size_max=15, zoom=17,hover_name ='Sensor'
-                  ,mapbox_style="carto-positron")
+fig_map=CreateMap()
+# fig_map = px.scatter_mapbox(df_sensor, lat="lat", lon="lon", color="level", size="Sensor_value",
+#                   color_continuous_scale=px.colors.cyclical.IceFire, size_max=15, zoom=17,hover_name ='Sensor'
+#                   ,hover_data=["level"],mapbox_style="carto-positron")
 
 app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 #dashboard layout
@@ -39,6 +48,7 @@ app.layout = dbc.Container([
         columns=[{"name": i, "id": i} for i in df_sensor.columns],
         style_data_conditional=[
         {
+            #caution
             'if': {
                 'filter_query': '{Sensor_value} > 80',
                 #'column_id': 'Value'
@@ -47,6 +57,7 @@ app.layout = dbc.Container([
             'color': 'black'
         },
         {
+            #NG
             'if': {
                 'filter_query': '{Sensor_value} > 130',
                 #'column_id': 'Value'
@@ -96,9 +107,7 @@ def update_live(data):
 @app.callback(Output('graph_map', 'figure'),
               Input('interval-component', 'n_intervals'))
 def update_graph_live(n):
-    fig_map = px.scatter_mapbox(df_sensor, lat="lat", lon="lon", color="Sensor_value", size="Sensor_value",
-                  color_continuous_scale=px.colors.cyclical.IceFire, size_max=15, zoom=17,hover_name ='Sensor'
-                  ,mapbox_style="carto-positron")
+    fig_map=CreateMap()
     return fig_map
 
 if __name__ == "__main__":
